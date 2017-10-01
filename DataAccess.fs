@@ -34,32 +34,34 @@ values ($Name, $Latitude, $Longitude, $Cuisine, $VegetarianOptions, $VeganOption
     let private getLunchFetchingQuery filter =
         let cuisinePart, hasCuisine =
             match filter.Cuisine with
-            | Some c -> (sprintf "Cuisine = \"%s\" " c, true)
+            | Some c -> (sprintf "Cuisine = '%s'" c, true)
             | None -> ("", false)
 
-        let vegetarianPart, hasVegetarian =
+        let vegetarianPart, hasVegetarianPart =
             match filter.VegetarianOptions with
-            | Some v -> (sprintf "VegetarianOptions = \"%d\" " (if v then 1 else 0), true)
+            | Some v -> (sprintf "VegetarianOptions = %d" (if v then 1 else 0), true)
             | None -> ("", false)
 
-        let veganPart, hasVegan =
+        let veganPart, hasVeganPart =
             match filter.VeganOptions with
-            | Some v -> (sprintf "VeganOptions = \"%d\" " (if v then 1 else 0), true)
+            | Some v -> (sprintf "VeganOptions = %d" (if v then 1 else 0), true)
             | None -> ("", false)
 
-        let hasWhereClause = hasCuisine || hasVegetarian || hasVegan
+        let hasWhereClause = hasCuisine || hasVegetarianPart || hasVeganPart
 
         let query =
             "select * from LunchSpots" +
-            (if hasWhereClause then " where" else "") + 
+            (if hasWhereClause then " where " else "") +
             cuisinePart +
-            (if hasCuisine then " and " else "") + vegetarianPart +
-            (if hasCuisine || hasVegetarian then " and " else "") + veganPart
+            (if hasCuisine && hasVegetarianPart then " and " else "") + vegetarianPart +
+            (if (hasCuisine || hasVegetarianPart) && hasVeganPart then " and " else "") + veganPart
 
         query
 
-    let getLunches (filter: LunchFilter) =
+    let getLunches (logger: string -> unit) (filter: LunchFilter) =
         let query = getLunchFetchingQuery filter
+
+        logger query
 
         use conn = new SqliteConnection(connString)
         conn.Open()

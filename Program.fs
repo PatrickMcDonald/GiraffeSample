@@ -21,7 +21,13 @@ open DataAccess
 
 let handleLunchFilter (next: HttpFunc) (ctx: HttpContext) =
     let filter = ctx.BindQueryString<LunchFilter>()
-    let lunchSpots = LunchAccess.getLunches filter
+    let logger = ctx.GetLogger()
+    if filter.VegetarianOptions.IsSome then
+        logger.LogInformation <| filter.VegetarianOptions.ToString()
+    else
+        logger.LogInformation "No filter"
+
+    let lunchSpots = LunchAccess.getLunches logger.LogInformation filter
     json lunchSpots next ctx
 
 let handleAddLunch (next: HttpFunc) (ctx: HttpContext) =
@@ -72,7 +78,7 @@ let configureServices (services : IServiceCollection) =
     services.AddRazorEngine viewsFolderPath |> ignore
 
 let configureLogging (builder : ILoggingBuilder) =
-    let filter (l : LogLevel) = l.Equals LogLevel.Error
+    let filter (l : LogLevel) = l >= LogLevel.Information
     builder.AddFilter(filter).AddConsole().AddDebug() |> ignore
 
 [<EntryPoint>]
