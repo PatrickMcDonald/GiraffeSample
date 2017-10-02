@@ -20,20 +20,16 @@ open LunchTypes
 open DataAccess
 
 let handleLunchFilter (next: HttpFunc) (ctx: HttpContext) =
+  task {
     let filter = ctx.BindQueryString<LunchFilter>()
-    let logger = ctx.GetLogger()
-    if filter.VegetarianOptions.IsSome then
-        logger.LogInformation <| filter.VegetarianOptions.ToString()
-    else
-        logger.LogInformation "No filter"
-
-    let lunchSpots = LunchAccess.getLunches logger.LogInformation filter
-    json lunchSpots next ctx
+    let! lunchSpots = LunchAccess.getLunches ignore filter
+    return! json lunchSpots next ctx
+  }
 
 let handleAddLunch (next: HttpFunc) (ctx: HttpContext) =
     task {
         let! lunch = ctx.BindJson<LunchSpot>()
-        LunchAccess.addLunch lunch
+        do! LunchAccess.addLunch lunch
         return! text (sprintf "Added %s to the lunch spots." lunch.Name) next ctx
     }
 

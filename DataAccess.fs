@@ -3,6 +3,7 @@ namespace DataAccess
 open System.IO
 open NPoco
 open Microsoft.Data.Sqlite
+open Giraffe.Tasks
 
 open LunchTypes
 
@@ -10,6 +11,7 @@ module LunchAccess =
     let private connString = "Filename=" + Path.Combine(Directory.GetCurrentDirectory(), "App_Data/GiraffeSample.db")
 
     let addLunch (lunchSpot: LunchSpot) =
+      task {
         use conn = new SqliteConnection(connString)
         conn.Open()
 
@@ -27,9 +29,11 @@ values ($Name, $Latitude, $Longitude, $Cuisine, $VegetarianOptions, $VeganOption
         cmd.Parameters.AddWithValue("$VegetarianOptions", lunchSpot.VegetarianOptions) |> ignore
         cmd.Parameters.AddWithValue("$VeganOptions", lunchSpot.VeganOptions) |> ignore
 
-        cmd.ExecuteNonQuery() |> ignore
+        let! r = cmd.ExecuteNonQueryAsync()
+        r |> ignore
 
         txn.Commit()
+      }
 
     let private getLunchFetchingQuery filter =
         let cuisinePart, hasCuisine =
@@ -59,6 +63,7 @@ values ($Name, $Latitude, $Longitude, $Cuisine, $VegetarianOptions, $VeganOption
         query
 
     let getLunches (logger: string -> unit) (filter: LunchFilter) =
+      task {
         let query = getLunchFetchingQuery filter
 
         logger query
@@ -67,5 +72,5 @@ values ($Name, $Latitude, $Longitude, $Cuisine, $VegetarianOptions, $VeganOption
         conn.Open()
 
         use db = new Database(conn)
-        db.Fetch<LunchSpot>(query)    
-
+        return! db.FetchAsync<LunchSpot>(query)
+      }
